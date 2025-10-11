@@ -1,0 +1,63 @@
+name: Scheduled Inquiry Automation
+
+on:
+  schedule:
+    # 毎時0分に実行（UTC）
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      RUN_SLOT:
+        description: 'Override slot number (optional)'
+        required: false
+        type: string
+      WRAP:
+        description: 'Wrap mode (true to loop after last slot)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  run-automation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run automation script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          CAPTCHA_API_KEY: ${{ secrets.CAPTCHA_API_KEY }}
+          # スロット方式の設定
+          # リポジトリ変数(Repository Variables)に SLOT_START をUTCで設定してください（例: 2025-10-05T00:00:00Z）
+          SLOT_START: ${{ vars.SLOT_START }}
+          BATCH_SIZE: '400'
+          AUTO_INQUIRY_BATCH_SIZE: '400'
+          # 手動実行時に上書き可能
+          RUN_SLOT: ${{ inputs.RUN_SLOT }}
+          WRAP: ${{ inputs.WRAP || 'true' }}
+        run: npm start
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-logs
+          path: logs/
+
