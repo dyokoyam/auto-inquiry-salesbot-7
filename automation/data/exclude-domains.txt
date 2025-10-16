@@ -6,6 +6,9 @@
 # example.com
 # test.example.org
 
+# 苦情リスト
+htcc.co.jp
+
 # 以下に除外ドメインを設定します。
 houjin
 prtimes
